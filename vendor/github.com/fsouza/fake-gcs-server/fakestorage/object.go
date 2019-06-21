@@ -19,6 +19,7 @@ import (
 // Object represents the object that is stored within the fake server.
 type Object struct {
 	BucketName string `json:"-"`
+	Bucket 	   string `json:"bucket"`
 	Name       string `json:"name"`
 	Content    []byte `json:"-"`
 	// Crc32c checksum of Content. calculated by server when it's upload methods are used.
@@ -147,6 +148,11 @@ func (s *Server) listObjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	encoder.Encode(newListObjectsResponse(objs, prefixes))
+}
+
+func (s *Server) ok(w http.ResponseWriter, r *http.Request) {
+	encoder := json.NewEncoder(w)
+	encoder.Encode("{}")
 }
 
 func (s *Server) getObject(w http.ResponseWriter, r *http.Request) {

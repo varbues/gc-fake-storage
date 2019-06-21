@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mime"
-	"mime/multipart"
+	// "mime"
+	// "mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -38,6 +38,7 @@ func (s *Server) insertObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uploadType := r.URL.Query().Get("uploadType")
+	fmt.Println(fmt.Sprintf("Inserting object %s", uploadType))
 	switch uploadType {
 	case "media":
 		s.simpleUpload(bucketName, w, r)
@@ -103,35 +104,107 @@ func encodedMd5Hash(content []byte) string {
 	return encodedHash(md5Hash(content))
 }
 
+// formatRequest generates ascii representation of a request
+func formatRequest(r *http.Request) string {
+	// Create return string
+	var request []string
+	// Add the request string
+	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
+	request = append(request, url)
+	// Add the host
+	request = append(request, fmt.Sprintf("Host: %v", r.Host))
+	// Loop through headers
+	for name, headers := range r.Header {
+	  name = strings.ToLower(name)
+	  for _, h := range headers {
+		request = append(request, fmt.Sprintf("%v: %v\n", name, h))
+	  }
+	}
+	
+	// If this is a POST, add post data
+	if r.Method == "POST" {
+	   r.ParseForm()
+	   request = append(request, "\n")
+	   request = append(request, r.Form.Encode())
+	} 
+	 // Return the request as a string
+	 return strings.Join(request, "\n")
+   }
+
+
 func (s *Server) multipartUpload(bucketName string, w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil {
-		http.Error(w, "invalid Content-Type header", http.StatusBadRequest)
-		return
-	}
+
+	fmt.Println(formatRequest(r))
+
+	// contentType := r.Header.Get("Content-Type")
+
+
+
+
+
+	// mediaType, params, err := mime.ParseMediaType(contentType)
+	// if err != nil {
+	//   panic(err)
+	// }
+	// if mediaType != "multipart/related" {
+	//   panic(nil)
+	// }
+  
+	// rm := NewReader(r.Body, params)
+	// object, err := rm.ReadObject()
+	// if err != nil {
+	//   panic(err)
+	// }
+	// for i, part := range object.Values {
+	//   b, err := ioutil.ReadAll(part)
+	//   if err != nil {
+	// 	panic(err)
+	//   }
+	//   fmt.Printf("%d.: %s \n", i, string(b))
+	// }
+
+
+
+
+
+
+
+	// _, params, err := mime.ParseMediaType(contentType)
+	// if err != nil {
+	// 	http.Error(w, "invalid Content-Type header", http.StatusBadRequest)
+	// 	return
+	// }
 	var (
-		metadata *multipartMetadata
+		// metadata *multipartMetadata
 		content  []byte
 	)
-	reader := multipart.NewReader(r.Body, params["boundary"])
-	part, err := reader.NextPart()
-	for ; err == nil; part, err = reader.NextPart() {
-		if metadata == nil {
-			metadata, err = loadMetadata(part)
-		} else {
-			content, err = loadContent(part)
-		}
-		if err != nil {
-			break
-		}
-	}
-	if err != io.EOF {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	obj := Object{BucketName: bucketName, Name: metadata.Name, Content: content, Crc32c: encodedCrc32cChecksum(content), Md5Hash: encodedMd5Hash(content)}
-	err = s.createObject(obj)
+
+	// reader := multipart.NewReader(r.Body, params["boundary"])
+	// fmt.Println(fmt.Sprintf("boundary %s", params["boundary"]))
+	// part, err := reader.NextPart()
+	// for ; err == nil; part, err = reader.NextPart() {
+	// 	if metadata == nil {
+	// 		metadata, err = loadMetadata(part)
+	// 	} else {
+	// 		content, err = loadContent(part)
+	// 	}
+	// 	if err != nil {
+	// 		break
+	// 	}
+	// }
+	// if err != io.EOF {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+	// obj := Object{BucketName: bucketName, Name: metadata.Name, Content: content, Crc32c: encodedCrc32cChecksum(content), Md5Hash: encodedMd5Hash(content)}
+	
+	content = []byte("{}")
+
+	fmt.Println(fmt.Sprintf("Bucket name=%s", bucketName))
+	obj := Object{BucketName: bucketName, Bucket: bucketName, Name: "serialized-schema.avro", Content: content, Crc32c: encodedCrc32cChecksum(content), Md5Hash: encodedMd5Hash(content)}
+	// err = s.createObject(obj)
+	err := s.createObject(obj)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -247,6 +320,7 @@ func parseRange(r string, objLength, bodyLength int, w http.ResponseWriter) (fin
 }
 
 func loadMetadata(rc io.ReadCloser) (*multipartMetadata, error) {
+	fmt.Println("Loading metadata")
 	defer rc.Close()
 	var m multipartMetadata
 	err := json.NewDecoder(rc).Decode(&m)
@@ -254,6 +328,7 @@ func loadMetadata(rc io.ReadCloser) (*multipartMetadata, error) {
 }
 
 func loadContent(rc io.ReadCloser) ([]byte, error) {
+	fmt.Println("Loading content")
 	defer rc.Close()
 	return ioutil.ReadAll(rc)
 }

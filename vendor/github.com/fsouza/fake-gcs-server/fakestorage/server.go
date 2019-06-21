@@ -81,9 +81,9 @@ func NewServerWithOptions(options Options) (*Server, error) {
 		}
 		s.ts.Listener.Close()
 		s.ts.Listener = l
-		s.ts.StartTLS()
+		s.ts.Start()
 	} else {
-		s.ts.StartTLS()
+		s.ts.Start()
 	}
 	s.setTransportToAddr(s.ts.Listener.Addr().String())
 	return s, nil
@@ -128,6 +128,7 @@ func (s *Server) buildMuxer() {
 	s.mux = mux.NewRouter()
 	s.mux.Host("storage.googleapis.com").Path("/{bucketName}/{objectName:.+}").Methods("GET", "HEAD").HandlerFunc(s.downloadObject)
 	s.mux.Host("{bucketName}.storage.googleapis.com").Path("/{objectName:.+}").Methods("GET", "HEAD").HandlerFunc(s.downloadObject)
+	s.mux.Path("/projection/full").Methods("POST", "HEAD").HandlerFunc(s.ok)
 	r := s.mux.PathPrefix("/storage/v1").Subrouter()
 	r.Path("/b").Methods("GET").HandlerFunc(s.listBuckets)
 	r.Path("/b/{bucketName}").Methods("GET").HandlerFunc(s.getBucket)
