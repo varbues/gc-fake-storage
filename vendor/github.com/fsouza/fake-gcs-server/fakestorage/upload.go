@@ -38,7 +38,9 @@ func (s *Server) insertObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uploadType := r.URL.Query().Get("uploadType")
-	fmt.Println(fmt.Sprintf("Inserting object %s", uploadType))
+	fmt.Println(fmt.Sprintf("Inserting object '%s'", uploadType))
+
+	fmt.Println(formatRequest(r))
 	switch uploadType {
 	case "media":
 		s.simpleUpload(bucketName, w, r)
@@ -121,6 +123,31 @@ func formatRequest(r *http.Request) string {
 	  }
 	}
 	
+	r.ParseForm()
+
+	r.ParseMultipartForm(1234567)
+
+	fmt.Println("Form data")
+
+	for k, v := range r.Form {
+        fmt.Println("key:", k)
+        fmt.Println("val:", strings.Join(v, ""))
+	}
+	
+	fmt.Println("PostForm data")
+
+	for k, v := range r.PostForm {
+        fmt.Println("key:", k)
+        fmt.Println("val:", strings.Join(v, ""))
+	}
+	
+	// fmt.Println("MultipartForm data")
+
+	// for k, v := range r.MultipartForm {
+    //     fmt.Println("key:", k)
+    //     fmt.Println("val:", strings.Join(v, ""))
+    // }
+	
 	// If this is a POST, add post data
 	if r.Method == "POST" {
 	   r.ParseForm()
@@ -135,7 +162,11 @@ func formatRequest(r *http.Request) string {
 func (s *Server) multipartUpload(bucketName string, w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	fmt.Println(formatRequest(r))
+	// bod, _ := ioutil.ReadAll(r.Body)
+
+	// st := string(bod)
+
+	// fmt.Println(st)
 
 	// contentType := r.Header.Get("Content-Type")
 
@@ -150,7 +181,11 @@ func (s *Server) multipartUpload(bucketName string, w http.ResponseWriter, r *ht
 	// if mediaType != "multipart/related" {
 	//   panic(nil)
 	// }
-  
+
+	// for k, _ := range r.MultipartForm.File {
+	// 	fmt.Println(k)
+	// }
+
 	// rm := NewReader(r.Body, params)
 	// object, err := rm.ReadObject()
 	// if err != nil {
@@ -202,7 +237,7 @@ func (s *Server) multipartUpload(bucketName string, w http.ResponseWriter, r *ht
 	content = []byte("{}")
 
 	fmt.Println(fmt.Sprintf("Bucket name=%s", bucketName))
-	obj := Object{BucketName: bucketName, Bucket: bucketName, Name: "serialized-schema.avro", Content: content, Crc32c: encodedCrc32cChecksum(content), Md5Hash: encodedMd5Hash(content)}
+	obj := Object{BucketName: bucketName, Bucket: bucketName, Name: bucketName, Content: content, Crc32c: encodedCrc32cChecksum(content), Md5Hash: encodedMd5Hash(content)}
 	// err = s.createObject(obj)
 	err := s.createObject(obj)
 	if err != nil {
